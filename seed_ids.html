@@ -8,7 +8,7 @@
 <pre id="out"></pre>
 
 
-<script type="module">
+<script type="module"> <script type="module" src="firebase-init.js"></script>
 import { auth, db } from './firebase-init.js';
 import { setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
@@ -33,4 +33,5 @@ out.textContent += 'Done.';
 });
 </script>
 </body>
+
 </html>
