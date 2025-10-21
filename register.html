@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>e-Civilian Portal — Register</title>
+</head>
+<body>
+<h2>Register — e-Civilian Portal</h2>
+<form id="regForm">
+<label>Name: <input id="name" required /></label><br/>
+<label>Email: <input id="email" type="email" required /></label><br/>
+<label>Password: <input id="password" type="password" required /></label><br/>
+<label>Civil ID (10 digits): <input id="civil" pattern="\d{10}" required /></label><br/>
+<button type="submit">Create Account</button>
+</form>
+<p id="msg"></p>
+<p>Already have an account? <a href="login.html">Login</a></p>
+
+
+<!-- Firebase init - paste the contents of firebase-init.js here or include it as a separate file -->
+<script type="module">
+import { auth, db } from './firebase-init.js';
+import { createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+
+const regForm = document.getElementById('regForm');
+const msg = document.getElementById('msg');
+
+
+regForm.addEventListener('submit', async (e) => {
+e.preventDefault();
+msg.textContent = 'Registering...';
+const name = document.getElementById('name').value.trim();
+const email = document.getElementById('email').value.trim();
+const password = document.getElementById('password').value;
+const civil = document.getElementById('civil').value.trim();
+
+
+if (!/^\d{10}$/.test(civil)) { msg.textContent = 'Civil ID must be 10 digits.'; return; }
+
+
+try {
+// 1) Check civil id exists in validCivilIDs collection
+const validRef = doc(db, 'validCivilIDs', civil);
+const validSnap = await getDoc(validRef);
+if (!validSnap.exists()) { msg.textContent = 'Civil ID not recognized. Contact admin.'; return; }
+
+
+// 2) Check not already used in citizens collection
+const citizenRef = doc(db, 'citizens', civil);
+const citizenSnap = await getDoc(citizenRef);
+if (citizenSnap.exists()) { msg.textContent = 'This Civil ID is already registered.'; return; }
+
+
+// 3) Create Firebase Auth user
+const userCred = await createUserWithEmailAndPassword(auth, email, password);
+const uid = userCred.user.uid;
+
+
+// 4) Store citizen record using Civil ID as document id
+await setDoc(citizenRef, {
+name: name,
+email: email,
+civilID: civil,
+uid: uid
+});
+
+
+// Optional: set displayName on auth profile
+await updateProfile(userCred.user, { displayName: name });
+
+
+msg.textContent = 'Registration successful — redirecting to dashboard...';
+setTimeout(() => window.location.href = 'dashboard.html', 900);
+} catch (err) {
+console.error(err);
+msg.textContent = 'Error: ' + (err.message || err);
+}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>Seed Civil IDs</title></head>
+<body>
+<h3>Seed valid Civil IDs (Admin)</h3>
+<p>Open this page once (while logged in with your Firebase project), click the button to create the validCivilIDs documents. Then delete this file.</p>
+<button id="seed">Seed IDs</button>
+<pre id="out"></pre>
+
+
+<script type="module">
+import { auth, db } from './firebase-init.js';
+import { setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+
+const ids = [
+'7295262362','7295373473','7295484584','7295595695','7295236009',
+'7295624879','7295624869','7295125998','7295624859','7295624849'
+];
+
+
+document.getElementById('seed').addEventListener('click', async () => {
+const out = document.getElementById('out');
+out.textContent = 'Seeding...\n';
+for (const id of ids) {
+const ref = doc(db, 'validCivilIDs', id);
+const snap = await getDoc(ref);
+if (snap.exists()) { out.textContent += `${id} already exists\n`; continue; }
+await setDoc(ref, { allowed: true });
+out.textContent += `${id} created\n`;
+}
+out.textContent += 'Done.';
+});
+</script>
+</body>
+</html>
