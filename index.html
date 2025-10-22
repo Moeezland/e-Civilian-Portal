@@ -1,46 +1,53 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Moeezland e-Civilian Portal — Login / Register</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moeezland e-Civilian Portal</title>
 </head>
 <body>
   <h1>Moeezland e-Civilian Portal</h1>
 
+  <!-- ====== Navigation ====== -->
   <div>
-    <button id="showLoginBtn">Login</button>
-    <button id="showRegisterBtn">Register</button>
+    <button id="loginTab">Login</button>
+    <button id="registerTab">Register</button>
   </div>
 
-  <!-- LOGIN FORM -->
-  <form id="loginForm" style="display:none; margin-top:16px;">
-    <h3>Login</h3>
-    <label>Email</label><br><input id="loginEmail" type="email" required><br>
-    <label>Password</label><br><input id="loginPassword" type="password" required><br>
-    <label>Civil ID</label><br><input id="loginCivil" type="text" required><br><br>
-    <button type="submit">Login</button>
-    <p id="loginMsg" style="color:red"></p>
-  </form>
+  <!-- ====== Login Section ====== -->
+  <div id="loginSection">
+    <h2>Login</h2>
+    <label>Email</label><br />
+    <input type="email" id="loginEmail" placeholder="Enter your email" /><br />
+    <label>Password</label><br />
+    <input type="password" id="loginPassword" placeholder="Enter your password" /><br />
+    <button id="loginBtn">Login</button>
+  </div>
 
-  <!-- REGISTER FORM -->
-  <form id="registerForm" style="display:none; margin-top:16px;">
-    <h3>Register</h3>
-    <label>Username (unique)</label><br><input id="regUsername" type="text" required><br>
-    <label>Email</label><br><input id="regEmail" type="email" required><br>
-    <label>Password</label><br><input id="regPassword" type="password" required><br>
-    <label>Civil ID</label><br><input id="regCivil" type="text" required><br><br>
-    <button type="submit">Create account</button>
-    <p id="regMsg" style="color:red"></p>
-  </form>
+  <!-- ====== Register Section ====== -->
+  <div id="registerSection" style="display:none;">
+    <h2>Register</h2>
+    <label>Username (unique)</label><br />
+    <input type="text" id="username" placeholder="Your username" /><br />
+    <label>Email</label><br />
+    <input type="email" id="registerEmail" placeholder="Your email" /><br />
+    <label>Password</label><br />
+    <input type="password" id="registerPassword" placeholder="Your password" /><br />
+    <label>Civil ID</label><br />
+    <input type="text" id="civilId" placeholder="10-digit Civil ID" /><br />
+    <button id="registerBtn">Create account</button>
+  </div>
 
+  <p id="message" style="color:red;"></p>
+
+  <!-- ====== Firebase SDK + App Logic ====== -->
   <script type="module">
-    // Firebase SDKs
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    // Import Firebase modules from CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-    // ---------- CONFIG ----------
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
       authDomain: "e-civilian-portal2007.firebaseapp.com",
@@ -50,108 +57,98 @@
       appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    // ---------- UI SWITCH ----------
-    const showLoginBtn = document.getElementById('showLoginBtn');
-    const showRegisterBtn = document.getElementById('showRegisterBtn');
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
+    // UI elements
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginSection = document.getElementById('loginSection');
+    const registerSection = document.getElementById('registerSection');
+    const message = document.getElementById('message');
 
-    function showLogin() {
-      loginForm.style.display = 'block';
-      registerForm.style.display = 'none';
-    }
-    function showRegister() {
-      loginForm.style.display = 'none';
-      registerForm.style.display = 'block';
-    }
+    // Switch tabs
+    loginTab.onclick = () => {
+      loginSection.style.display = 'block';
+      registerSection.style.display = 'none';
+      message.textContent = '';
+    };
+    registerTab.onclick = () => {
+      registerSection.style.display = 'block';
+      loginSection.style.display = 'none';
+      message.textContent = '';
+    };
 
-    // default: show login
-    showLogin();
+    // Register user
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('registerPassword').value.trim();
+      const civilId = document.getElementById('civilId').value.trim();
 
-    showLoginBtn.addEventListener('click', showLogin);
-    showRegisterBtn.addEventListener('click', showRegister);
-
-    // ---------- LOGIN ----------
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value;
-      const civilId = document.getElementById('loginCivil').value.trim();
-      const loginMsg = document.getElementById('loginMsg');
-      loginMsg.textContent = '';
-
-      try {
-        // check civil id exists and is used (must be used to allow login)
-        const civilRef = doc(db, 'civil_ids', civilId);
-        const civilSnap = await getDoc(civilRef);
-        if (!civilSnap.exists()) { loginMsg.textContent = 'Invalid Civil ID.'; return; }
-        const civilData = civilSnap.data();
-        if (!civilData.used) { loginMsg.textContent = 'This Civil ID has not been registered yet.'; return; }
-
-        // sign in
-        await signInWithEmailAndPassword(auth, email, password);
-        // success -> dashboard
-        window.location.href = 'dashboard.html';
-      } catch (err) {
-        console.error(err);
-        loginMsg.textContent = err.message || 'Login failed';
+      if (!username || !email || !password || !civilId) {
+        message.textContent = "Please fill in all fields.";
+        return;
       }
-    });
-
-    // ---------- REGISTER ----------
-    registerForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const username = document.getElementById('regUsername').value.trim();
-      const email = document.getElementById('regEmail').value.trim();
-      const password = document.getElementById('regPassword').value;
-      const civilId = document.getElementById('regCivil').value.trim();
-      const regMsg = document.getElementById('regMsg');
-      regMsg.textContent = '';
-
-      if (!username || !email || !password || !civilId) { regMsg.textContent = 'Fill all fields.'; return; }
 
       try {
-        // 1) civil id exists & unused
-        const civilRef = doc(db, 'civil_ids', civilId);
+        // Check if Civil ID exists
+        const civilRef = doc(db, "civil_ids", civilId);
         const civilSnap = await getDoc(civilRef);
-        if (!civilSnap.exists()) { regMsg.textContent = 'Invalid Civil ID.'; return; }
+
+        if (!civilSnap.exists()) {
+          message.textContent = "Invalid Civil ID. Please check your number.";
+          return;
+        }
+
         const civilData = civilSnap.data();
-        if (civilData.used) { regMsg.textContent = 'Civil ID already registered.'; return; }
+        if (civilData.used) {
+          message.textContent = "This Civil ID is already registered.";
+          return;
+        }
 
-        // 2) username uniqueness check
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('username', '==', username));
-        const qSnap = await getDocs(q);
-        if (!qSnap.empty) { regMsg.textContent = 'Username taken. Choose another.'; return; }
+        // Create Firebase Auth account
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-        // 3) create auth user
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        const uid = userCred.user.uid;
-
-        // 4) create user document under users/{uid}
-        await setDoc(doc(db, 'users', uid), {
-          uid: uid,
+        // Save user data to Firestore
+        await setDoc(doc(db, "users", user.uid), {
           username: username,
           email: email,
           civilId: civilId,
           createdAt: new Date().toISOString()
         });
 
-        // 5) mark civil id used
+        // Mark Civil ID as used
         await updateDoc(civilRef, { used: true });
 
-        // success -> dashboard
-        window.location.href = 'dashboard.html';
-      } catch (err) {
-        console.error(err);
-        regMsg.textContent = err.message || 'Registration failed';
+        alert("Account created successfully! Redirecting to dashboard...");
+        window.location.href = "dashboard.html";
+      } catch (error) {
+        message.textContent = `Firebase: ${error.message}`;
+      }
+    });
+
+    // Login user
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      if (!email || !password) {
+        message.textContent = "Please fill in all fields.";
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        alert("Login successful! Redirecting to dashboard...");
+        window.location.href = "dashboard.html";
+      } catch (error) {
+        message.textContent = `Firebase: ${error.message}`;
       }
     });
   </script>
 </body>
 </html>
-
