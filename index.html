@@ -1,38 +1,48 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Moeezland e-Civilian Portal</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Moeezland e-Civilian Portal — Login / Register</title>
 </head>
 <body>
   <h1>Moeezland e-Civilian Portal</h1>
-  <h3>Login / Register</h3>
 
-  <form id="authForm">
-    <label>Email:</label><br>
-    <input type="email" id="email" required><br><br>
+  <div>
+    <button id="showLoginBtn">Login</button>
+    <button id="showRegisterBtn">Register</button>
+  </div>
 
-    <label>Password:</label><br>
-    <input type="password" id="password" required><br><br>
-
-    <label>Civil ID:</label><br>
-    <input type="text" id="civilId" required><br><br>
-
-    <button type="submit">Submit</button>
+  <!-- LOGIN FORM -->
+  <form id="loginForm" style="display:none; margin-top:16px;">
+    <h3>Login</h3>
+    <label>Email</label><br><input id="loginEmail" type="email" required><br>
+    <label>Password</label><br><input id="loginPassword" type="password" required><br>
+    <label>Civil ID</label><br><input id="loginCivil" type="text" required><br><br>
+    <button type="submit">Login</button>
+    <p id="loginMsg" style="color:red"></p>
   </form>
 
-  <p id="status" style="color:red;"></p>
+  <!-- REGISTER FORM -->
+  <form id="registerForm" style="display:none; margin-top:16px;">
+    <h3>Register</h3>
+    <label>Username (unique)</label><br><input id="regUsername" type="text" required><br>
+    <label>Email</label><br><input id="regEmail" type="email" required><br>
+    <label>Password</label><br><input id="regPassword" type="password" required><br>
+    <label>Civil ID</label><br><input id="regCivil" type="text" required><br><br>
+    <button type="submit">Create account</button>
+    <p id="regMsg" style="color:red"></p>
+  </form>
 
   <script type="module">
-    // ===== IMPORT FIREBASE SDKs =====
+    // Firebase SDKs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 
-    // ===== YOUR FIREBASE CONFIG =====
+    // ---------- CONFIG ----------
     const firebaseConfig = {
-      apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
+      apiKey: "YOUR_API_KEY",
       authDomain: "e-civilian-portal2007.firebaseapp.com",
       projectId: "e-civilian-portal2007",
       storageBucket: "e-civilian-portal2007.firebasestorage.app",
@@ -40,56 +50,105 @@
       appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
     };
 
-    // ===== INITIALIZE FIREBASE =====
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    // ===== FORM HANDLING =====
-    const form = document.getElementById("authForm");
-    const status = document.getElementById("status");
+    // ---------- UI SWITCH ----------
+    const showLoginBtn = document.getElementById('showLoginBtn');
+    const showRegisterBtn = document.getElementById('showRegisterBtn');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
 
-    form.addEventListener("submit", async (e) => {
+    function showLogin() {
+      loginForm.style.display = 'block';
+      registerForm.style.display = 'none';
+    }
+    function showRegister() {
+      loginForm.style.display = 'none';
+      registerForm.style.display = 'block';
+    }
+
+    // default: show login
+    showLogin();
+
+    showLoginBtn.addEventListener('click', showLogin);
+    showRegisterBtn.addEventListener('click', showRegister);
+
+    // ---------- LOGIN ----------
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      status.textContent = "";
-
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const civilId = document.getElementById("civilId").value.trim();
-
-      if (!email || !password || !civilId) {
-        status.textContent = "Please fill all fields!";
-        return;
-      }
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const civilId = document.getElementById('loginCivil').value.trim();
+      const loginMsg = document.getElementById('loginMsg');
+      loginMsg.textContent = '';
 
       try {
-        // Check civil ID in Firestore
-        const civilRef = doc(db, "civil_ids", civilId);
+        // check civil id exists and is used (must be used to allow login)
+        const civilRef = doc(db, 'civil_ids', civilId);
         const civilSnap = await getDoc(civilRef);
-
-        if (!civilSnap.exists()) {
-          status.textContent = "Invalid Civil ID.";
-          return;
-        }
-
+        if (!civilSnap.exists()) { loginMsg.textContent = 'Invalid Civil ID.'; return; }
         const civilData = civilSnap.data();
-        if (civilData.used) {
-          // Civil ID already used -> login
-          await signInWithEmailAndPassword(auth, email, password);
-          window.location.href = "dashboard.html";
-        } else {
-          // Civil ID not used -> register
-          await createUserWithEmailAndPassword(auth, email, password);
-          await setDoc(doc(db, "users", email), {
-            email: email,
-            civilId: civilId,
-            createdAt: new Date().toISOString()
-          });
-          await updateDoc(civilRef, { used: true });
-          window.location.href = "dashboard.html";
-        }
-      } catch (error) {
-        status.textContent = `Error: ${error.message}`;
+        if (!civilData.used) { loginMsg.textContent = 'This Civil ID has not been registered yet.'; return; }
+
+        // sign in
+        await signInWithEmailAndPassword(auth, email, password);
+        // success -> dashboard
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        console.error(err);
+        loginMsg.textContent = err.message || 'Login failed';
+      }
+    });
+
+    // ---------- REGISTER ----------
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const civilId = document.getElementById('regCivil').value.trim();
+      const regMsg = document.getElementById('regMsg');
+      regMsg.textContent = '';
+
+      if (!username || !email || !password || !civilId) { regMsg.textContent = 'Fill all fields.'; return; }
+
+      try {
+        // 1) civil id exists & unused
+        const civilRef = doc(db, 'civil_ids', civilId);
+        const civilSnap = await getDoc(civilRef);
+        if (!civilSnap.exists()) { regMsg.textContent = 'Invalid Civil ID.'; return; }
+        const civilData = civilSnap.data();
+        if (civilData.used) { regMsg.textContent = 'Civil ID already registered.'; return; }
+
+        // 2) username uniqueness check
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('username', '==', username));
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) { regMsg.textContent = 'Username taken. Choose another.'; return; }
+
+        // 3) create auth user
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+
+        // 4) create user document under users/{uid}
+        await setDoc(doc(db, 'users', uid), {
+          uid: uid,
+          username: username,
+          email: email,
+          civilId: civilId,
+          createdAt: new Date().toISOString()
+        });
+
+        // 5) mark civil id used
+        await updateDoc(civilRef, { used: true });
+
+        // success -> dashboard
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        console.error(err);
+        regMsg.textContent = err.message || 'Registration failed';
       }
     });
   </script>
