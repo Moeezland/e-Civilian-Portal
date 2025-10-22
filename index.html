@@ -48,6 +48,8 @@
         }
 
         const civilData = civilSnap.data();
+        console.log("Fetched Civil Data:", civilData);
+
 
         if (civilData.used) {
           status.innerText = "This Civil ID is already registered.";
@@ -89,4 +91,5 @@
   <button onclick="registerUser()">Register</button>
   <p id="status" style="color:red;"></p>
 </body>
+
 </html>
