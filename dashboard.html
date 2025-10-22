@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moeezland e-Civilian Dashboard</title>
+</head>
+<body>
+  <h1>Welcome to your Moeezland e-Civilian Dashboard</h1>
+  <p id="info">Loading your information...</p>
+  <button id="logout">Logout</button>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "e-civilian-portal2007.firebaseapp.com",
+      projectId: "e-civilian-portal2007",
+      storageBucket: "e-civilian-portal2007.firebasestorage.app",
+      messagingSenderId: "465001179759",
+      appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const info = document.getElementById("info");
+    const logoutBtn = document.getElementById("logout");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const docRef = doc(db, "users", user.email);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          info.innerHTML = `
+            <strong>Email:</strong> ${data.email}<br>
+            <strong>Civil ID:</strong> ${data.civilId}<br>
+            <strong>Account Created:</strong> ${new Date(data.createdAt).toLocaleString()}
+          `;
+        } else {
+          info.textContent = "No user data found.";
+        }
+      } else {
+        window.location.href = "index.html";
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>
