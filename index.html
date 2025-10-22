@@ -1,15 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>e-Civilian Portal – Register</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moeezland e-Civilian Portal</title>
+</head>
+<body>
+  <h1>Moeezland e-Civilian Portal</h1>
+  <h3>Login / Register</h3>
+
+  <form id="authForm">
+    <label>Email:</label><br>
+    <input type="email" id="email" required><br><br>
+
+    <label>Password:</label><br>
+    <input type="password" id="password" required><br><br>
+
+    <label>Civil ID:</label><br>
+    <input type="text" id="civilId" required><br><br>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <p id="status" style="color:red;"></p>
 
   <script type="module">
+    // ===== IMPORT FIREBASE SDKs =====
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
-    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 
-    // 🔹 Firebase config
+    // ===== YOUR FIREBASE CONFIG =====
     const firebaseConfig = {
       apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
       authDomain: "e-civilian-portal2007.firebaseapp.com",
@@ -19,100 +40,58 @@
       appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
     };
 
+    // ===== INITIALIZE FIREBASE =====
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const form = document.getElementById("registerForm");
+    // ===== FORM HANDLING =====
+    const form = document.getElementById("authForm");
+    const status = document.getElementById("status");
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      status.textContent = "";
 
-        const username = form.username.value.trim();
-        const email = form.email.value.trim();
-        const password = form.password.value.trim();
-        const civilId = form.civilId.value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const civilId = document.getElementById("civilId").value.trim();
 
-        if (!username || !email || !password || !civilId) {
-          alert("Please fill in all fields.");
+      if (!email || !password || !civilId) {
+        status.textContent = "Please fill all fields!";
+        return;
+      }
+
+      try {
+        // Check civil ID in Firestore
+        const civilRef = doc(db, "civil_ids", civilId);
+        const civilSnap = await getDoc(civilRef);
+
+        if (!civilSnap.exists()) {
+          status.textContent = "Invalid Civil ID.";
           return;
         }
 
-        try {
-          // 🔹 1. Check if Civil ID exists
-          const civilRef = doc(db, "civil_ids", civilId);
-          const civilSnap = await getDoc(civilRef);
-
-          if (!civilSnap.exists()) {
-            alert("Invalid Civil ID.");
-            return;
-          }
-
-          const civilData = civilSnap.data();
-          if (civilData.used) {
-            alert("This Civil ID is already registered.");
-            return;
-          }
-
-          // 🔹 2. Check if username already exists
-          const usersRef = collection(db, "users");
-          const usernameQuery = query(usersRef, where("username", "==", username));
-          const usernameSnap = await getDocs(usernameQuery);
-
-          if (!usernameSnap.empty) {
-            alert("That username is already taken. Choose another one.");
-            return;
-          }
-
-          // 🔹 3. Create account in Firebase Auth
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const userId = userCredential.user.uid;
-
-          // 🔹 4. Save user info in Firestore
-          await addDoc(usersRef, {
-            uid: userId,
-            username: username,
+        const civilData = civilSnap.data();
+        if (civilData.used) {
+          // Civil ID already used -> login
+          await signInWithEmailAndPassword(auth, email, password);
+          window.location.href = "dashboard.html";
+        } else {
+          // Civil ID not used -> register
+          await createUserWithEmailAndPassword(auth, email, password);
+          await setDoc(doc(db, "users", email), {
             email: email,
             civilId: civilId,
-            registeredAt: serverTimestamp()
+            createdAt: new Date().toISOString()
           });
-
-          // 🔹 5. Mark Civil ID as used
           await updateDoc(civilRef, { used: true });
-
-          // 🔹 6. Save in session + redirect
-          sessionStorage.setItem("username", username);
-          sessionStorage.setItem("email", email);
-          sessionStorage.setItem("civilId", civilId);
-
-          alert("Registration successful! Redirecting to dashboard...");
           window.location.href = "dashboard.html";
-        } catch (error) {
-          console.error("Error:", error);
-          alert("Error: " + error.message);
         }
-      });
+      } catch (error) {
+        status.textContent = `Error: ${error.message}`;
+      }
     });
   </script>
-</head>
-
-<body>
-  <h2>e-Civilian Portal – Create Your Account</h2>
-  <form id="registerForm">
-    <label>Username:</label><br>
-    <input type="text" name="username" required><br><br>
-
-    <label>Email:</label><br>
-    <input type="email" name="email" required><br><br>
-
-    <label>Password:</label><br>
-    <input type="password" name="password" required><br><br>
-
-    <label>Civil ID:</label><br>
-    <input type="text" name="civilId" required><br><br>
-
-    <button type="submit">Register</button>
-  </form>
 </body>
 </html>
