@@ -1,27 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>e-Civilian Portal - Register</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moeezland e-Civilian Registration</title>
 </head>
 <body>
-  <h2>e-Civilian Portal - Registration</h2>
+  <h2>Register for e-Civilian Account</h2>
+  <form id="registerForm">
+    <label>Full Name:</label>
+    <input type="text" id="fullName" placeholder="Enter your legal name" required><br><br>
 
-  <input type="text" id="name" placeholder="Full Name"><br>
-  <input type="text" id="civilId" placeholder="Civil ID (10 digits)"><br>
-  <input type="email" id="email" placeholder="Email"><br>
-  <input type="password" id="password" placeholder="Password"><br><br>
+    <label>Civil ID Number:</label>
+    <input type="text" id="civilId" placeholder="Enter your Civil ID" required><br><br>
 
-  <button id="registerBtn">Register</button>
-  <p id="status" style="color:red;"></p>
+    <label>Email:</label>
+    <input type="email" id="email" placeholder="Enter your email" required><br><br>
 
+    <label>Password:</label>
+    <input type="password" id="password" placeholder="Enter your password" required><br><br>
+
+    <button type="submit">Register</button>
+  </form>
+
+  <p id="message" style="color:red;"></p>
+
+  <!-- Firebase SDKs -->
   <script type="module">
-    // Import Firebase SDKs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
-    // Firebase configuration
+    // ✅ Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
       authDomain: "e-civilian-portal2007.firebaseapp.com",
@@ -31,72 +41,65 @@
       appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
     };
 
-    // Initialize Firebase
+    // ✅ Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    const status = document.getElementById("status");
-
-    // Register user function
-    async function registerUser() {
-      const name = document.getElementById("name").value.trim();
+    // ✅ Registration Logic
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById("fullName").value.trim();
       const civilId = document.getElementById("civilId").value.trim();
       const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
+      const password = document.getElementById("password").value;
 
-      if (!name || !civilId || !email || !password) {
-        status.innerText = "Please fill all fields!";
-        return;
-      }
+      const message = document.getElementById("message");
+      message.textContent = "";
 
       try {
+        console.log("Checking Firestore for Civil ID:", civilId);
+
         const civilRef = doc(db, "civil_ids", civilId);
         const civilSnap = await getDoc(civilRef);
 
+        console.log("Document exists:", civilSnap.exists());
+        console.log("Document data:", civilSnap.data());
+
         if (!civilSnap.exists()) {
-          status.innerText = "Invalid Civil ID!";
-          return;
+          throw new Error("Civil ID not found in the government database.");
         }
 
         const civilData = civilSnap.data();
-        console.log("Fetched Civil Data:", civilData); // 🔍 DEBUG LINE
 
-        if (!civilData.legalName) {
-          status.innerText = "Error: legalName field missing in database!";
-          return;
+        // Debug deeper
+        console.log("Fetched Civil Data:", civilData);
+        console.log("LegalName Field Exists:", civilData?.LegalName);
+        console.log("Used Field:", civilData?.used);
+
+        if (civilData.used === true) {
+          throw new Error("This Civil ID is already registered.");
         }
 
-        if (civilData.used) {
-          status.innerText = "This Civil ID is already registered.";
-          return;
+        if (civilData.LegalName.toLowerCase() !== fullName.toLowerCase()) {
+          throw new Error("Entered name does not match the government record.");
         }
 
-        if (civilData.legalName.toLowerCase() !== name.toLowerCase()) {
-          status.innerText = "Name does not match our records.";
-          return;
-        }
+        // ✅ Create Firebase Auth user
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        console.log("User created:", userCredential.user.uid);
 
-        // Create the user in Firebase Auth
-        await createUserWithEmailAndPassword(auth, email, password);
-
-        // Mark Civil ID as used
+        // ✅ Mark Civil ID as used
         await updateDoc(civilRef, { used: true });
 
-        // Store info locally
-        localStorage.setItem("userName", name);
-        localStorage.setItem("userEmail", email);
-        localStorage.setItem("civilId", civilId);
-
+        // ✅ Redirect to dashboard
         window.location.href = "dashboard.html";
 
       } catch (error) {
-        console.error(error);
-        status.innerText = "Error: " + error.message;
+        console.error("Error:", error);
+        message.textContent = error.message;
       }
-    }
-
-    document.getElementById("registerBtn").addEventListener("click", registerUser);
+    });
   </script>
 </body>
 </html>
