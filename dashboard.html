@@ -1,19 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Moeezland e-Civilian Dashboard</title>
 </head>
 <body>
-  <h1>Welcome to your Moeezland e-Civilian Dashboard</h1>
-  <p id="info">Loading your information...</p>
-  <button id="logout">Logout</button>
+  <h1>Moeezland e-Civilian Dashboard</h1>
+  <div id="profile">Loading your information...</div>
+  <button id="logoutBtn">Logout</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
@@ -25,34 +25,40 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    const info = document.getElementById("info");
-    const logoutBtn = document.getElementById("logout");
+    const profileDiv = document.getElementById('profile');
+    const logoutBtn = document.getElementById('logoutBtn');
 
     onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const docRef = doc(db, "users", user.email);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          info.innerHTML = `
-            <strong>Email:</strong> ${data.email}<br>
-            <strong>Civil ID:</strong> ${data.civilId}<br>
-            <strong>Account Created:</strong> ${new Date(data.createdAt).toLocaleString()}
-          `;
-        } else {
-          info.textContent = "No user data found.";
-        }
-      } else {
-        window.location.href = "index.html";
+      if (!user) {
+        // not logged in -> go to index
+        window.location.href = 'index.html';
+        return;
       }
+
+      // read user's firestore doc using uid
+      const userDocRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userDocRef);
+
+      if (!userSnap.exists()) {
+        profileDiv.textContent = 'Profile not found. Please contact admin.';
+        return;
+      }
+
+      const data = userSnap.data();
+      profileDiv.innerHTML = `
+        <p><strong>Username:</strong> ${data.username || '(none)'}</p>
+        <p><strong>Email:</strong> ${data.email || user.email}</p>
+        <p><strong>Civil ID:</strong> ${data.civilId || '(unknown)'}</p>
+        <p><strong>Registered:</strong> ${data.createdAt || '(unknown)'}</p>
+      `;
     });
 
-    logoutBtn.addEventListener("click", async () => {
+    logoutBtn.addEventListener('click', async () => {
       await signOut(auth);
-      window.location.href = "index.html";
+      window.location.href = 'index.html';
     });
   </script>
 </body>
