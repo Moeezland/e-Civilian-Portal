@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>e-Civilian Portal - Register</title>
+  <script type="module">
+
+    // Import Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
+      authDomain: "e-civilian-portal2007.firebaseapp.com",
+      projectId: "e-civilian-portal2007",
+      storageBucket: "e-civilian-portal2007.firebasestorage.app",
+      messagingSenderId: "465001179759",
+      appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Register function
+    window.registerUser = async () => {
+      const name = document.getElementById("name").value.trim();
+      const civilId = document.getElementById("civilId").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      const status = document.getElementById("status");
+
+      if (!name || !civilId || !email || !password) {
+        status.innerText = "Please fill all fields!";
+        return;
+      }
+
+      try {
+        const civilRef = doc(db, "civil_ids", civilId);
+        const civilSnap = await getDoc(civilRef);
+
+        if (!civilSnap.exists()) {
+          status.innerText = "Invalid Civil ID!";
+          return;
+        }
+
+        const civilData = civilSnap.data();
+
+        if (civilData.used) {
+          status.innerText = "This Civil ID is already registered.";
+          return;
+        }
+
+        if (civilData.legalName.toLowerCase() !== name.toLowerCase()) {
+          status.innerText = "Name does not match our records.";
+          return;
+        }
+
+        // Create the user
+        await createUserWithEmailAndPassword(auth, email, password);
+
+        // Mark the Civil ID as used
+        await updateDoc(civilRef, { used: true });
+
+        // Save info locally
+        localStorage.setItem("userName", name);
+        localStorage.setItem("userEmail", email);
+        localStorage.setItem("civilId", civilId);
+
+        window.location.href = "dashboard.html";
+
+      } catch (error) {
+        console.error(error);
+        status.innerText = "Error: " + error.message;
+      }
+    };
+  </script>
+</head>
+
+<body>
+  <h2>e-Civilian Portal - Registration</h2>
+  <input type="text" id="name" placeholder="Full Name"><br>
+  <input type="text" id="civilId" placeholder="Civil ID (10 digits)"><br>
+  <input type="email" id="email" placeholder="Email"><br>
+  <input type="password" id="password" placeholder="Password"><br><br>
+  <button onclick="registerUser()">Register</button>
+  <p id="status" style="color:red;"></p>
+</body>
+</html>
