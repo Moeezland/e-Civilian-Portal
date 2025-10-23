@@ -1,14 +1,86 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Moeezland e-Civilian Dashboard</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f8faff;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .logo {
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .logo img {
+      width: 420px;
+      max-width: 90%;
+    }
+
+    .container {
+      background: #ffffff;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      padding: 30px 40px;
+      width: 360px;
+      text-align: center;
+      margin-top: 25px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      color: #0b56b3;
+      margin-bottom: 16px;
+    }
+
+    p {
+      margin: 8px 0;
+      color: #333;
+      font-size: 15px;
+    }
+
+    strong {
+      color: #0b56b3;
+    }
+
+    #logoutBtn {
+      background-color: #0b56b3;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      width: 100%;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 15px;
+      transition: background 0.3s;
+    }
+
+    #logoutBtn:hover {
+      background-color: #084a9c;
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Moeezland e-Civilian Dashboard</h1>
-  <div id="profile">Loading your information...</div>
-  <button id="logoutBtn">Logout</button>
+  <div class="logo">
+    <img src="0d7cc0c7-b1b8-456a-bb2a-0b8bc59a06a4.png" alt="Moeezland Population Service Logo">
+  </div>
+
+  <div class="container">
+    <h1>Moeezland e-Civilian Dashboard</h1>
+    <div id="profile">Loading your information...</div>
+    <button id="logoutBtn">Logout</button>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
@@ -33,27 +105,29 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        // not logged in -> go to index
         window.location.href = 'index.html';
         return;
       }
 
-      // read user's firestore doc using uid
-      const userDocRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userDocRef);
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userDocRef);
 
-      if (!userSnap.exists()) {
-        profileDiv.textContent = 'Profile not found. Please contact admin.';
-        return;
+        if (!userSnap.exists()) {
+          profileDiv.textContent = 'Profile not found. Please contact admin.';
+          return;
+        }
+
+        const data = userSnap.data();
+        profileDiv.innerHTML = `
+          <p><strong>Username:</strong> ${data.username || '(none)'}</p>
+          <p><strong>Email:</strong> ${data.email || user.email}</p>
+          <p><strong>Civil ID:</strong> ${data.civilId || '(unknown)'}</p>
+          <p><strong>Registered:</strong> ${data.createdAt || '(unknown)'}</p>
+        `;
+      } catch (err) {
+        profileDiv.textContent = 'Error loading data. Please try again later.';
       }
-
-      const data = userSnap.data();
-      profileDiv.innerHTML = `
-        <p><strong>Username:</strong> ${data.username || '(none)'}</p>
-        <p><strong>Email:</strong> ${data.email || user.email}</p>
-        <p><strong>Civil ID:</strong> ${data.civilId || '(unknown)'}</p>
-        <p><strong>Registered:</strong> ${data.createdAt || '(unknown)'}</p>
-      `;
     });
 
     logoutBtn.addEventListener('click', async () => {
