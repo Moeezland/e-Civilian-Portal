@@ -5,88 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Moeezland e-Civilian Dashboard</title>
   <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background-color: #f8faff;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    /* ===== HEADER BAR ===== */
-    header {
-      background-color: #0b56b3;
-      color: white;
-      width: 100%;
-      text-align: center;
-      padding: 12px 0;
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .logo {
-      text-align: center;
-      margin-top: 35px;
-    }
-
-    .logo img {
-      width: 420px;
-      max-width: 90%;
-    }
-
-    .container {
-      background: #ffffff;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      border-radius: 12px;
-      padding: 30px 40px;
-      width: 360px;
-      text-align: left; /* changed from center to left */
-      margin-top: 25px;
-    }
-
-    h1 {
-      font-size: 1.4rem;
-      color: #0b56b3;
-      margin-bottom: 16px;
-      text-align: center; /* keep title centered */
-    }
-
-    p {
-      margin: 8px 0;
-      color: #333;
-      font-size: 15px;
-    }
-
-    strong {
-      color: #0b56b3;
-    }
-
-    #logoutBtn {
-      background-color: #0b56b3;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 10px;
-      width: 100%;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: 600;
-      margin-top: 15px;
-      transition: background 0.3s;
-    }
-
-    #logoutBtn:hover {
-      background-color: #084a9c;
-    }
+    body { font-family: "Segoe UI", sans-serif; background-color: #f8faff; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    header { background-color: #0b56b3; color: white; width: 100%; text-align: center; padding: 12px 0; font-size: 18px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .logo { text-align: center; margin-top: 35px; }
+    .logo img { width: 420px; max-width: 90%; }
+    .container { background: #ffffff; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-radius: 12px; padding: 30px 40px; width: 360px; text-align: left; margin-top: 25px; }
+    h1 { font-size: 1.4rem; color: #0b56b3; margin-bottom: 16px; text-align: center; }
+    p { margin: 8px 0; color: #333; font-size: 15px; }
+    strong { color: #0b56b3; }
+    #logoutBtn { background-color: #0b56b3; color: #fff; border: none; border-radius: 8px; padding: 10px; width: 100%; cursor: pointer; font-size: 15px; font-weight: 600; margin-top: 15px; transition: background 0.3s; }
+    #logoutBtn:hover { background-color: #084a9c; }
+    #debug { font-size: 12px; color: #666; margin-top:10px; white-space:pre-wrap; }
   </style>
 </head>
 
 <body>
-  <!-- Header bar -->
   <header id="welcomeHeader">Welcome to Moeezland e-Civilian Portal</header>
 
   <div class="logo">
@@ -97,12 +30,14 @@
     <h1>Moeezland e-Civilian Dashboard</h1>
     <div id="profile">Loading your information...</div>
     <button id="logoutBtn">Logout</button>
+    <div id="debug" aria-hidden="true"></div>
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+    // Use the same CDN version your index uses (avoid version mismatch)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
@@ -120,41 +55,84 @@
     const profileDiv = document.getElementById('profile');
     const logoutBtn = document.getElementById('logoutBtn');
     const welcomeHeader = document.getElementById('welcomeHeader');
+    const debugDiv = document.getElementById('debug');
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
+    function debugLog(...args) {
+      // console and small UI debug area
+      console.log(...args);
+      debugDiv.textContent += args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ') + "\\n";
+    }
+
+    // Ensure logout button always has a safe handler even if auth hasn't initialized
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        logoutBtn.disabled = true;
+        debugLog('Logout clicked — attempting signOut()');
+        await signOut(auth);
+        debugLog('signOut() success, redirecting to index.html');
         window.location.href = 'index.html';
+      } catch (err) {
+        console.error('Logout error', err);
+        debugLog('Logout error: ' + (err && err.message ? err.message : String(err)));
+        alert('Logout failed: ' + (err.message || String(err)));
+        logoutBtn.disabled = false;
+      }
+    });
+
+    // Auth state observer — main flow
+    onAuthStateChanged(auth, async (user) => {
+      debugLog('onAuthStateChanged fired', { userExists: !!user, uid: user ? user.uid : null });
+      if (!user) {
+        debugLog('No user signed in — redirecting to index.html');
+        // small delay so debug message is visible in case of developer testing
+        setTimeout(() => window.location.href = 'index.html', 200);
         return;
       }
 
+      // show immediate basic info while we fetch Firestore
+      profileDiv.textContent = 'Loading your information...';
+
       try {
         const userDocRef = doc(db, 'users', user.uid);
+        debugLog('Requesting user doc at', 'users/' + user.uid);
         const userSnap = await getDoc(userDocRef);
 
         if (!userSnap.exists()) {
+          debugLog('User doc not found for uid', user.uid);
           profileDiv.textContent = 'Profile not found. Please contact admin.';
+          welcomeHeader.textContent = `Peace be upon you, Citizen 🤝`;
           return;
         }
 
         const data = userSnap.data();
+        debugLog('User data fetched', data);
+
+        // render left-aligned profile block
         profileDiv.innerHTML = `
-          <p><strong>Username:</strong> ${data.username || '(none)'}</p>
-          <p><strong>Email:</strong> ${data.email || user.email}</p>
-          <p><strong>Civil ID:</strong> ${data.civilId || '(unknown)'}</p>
-          <p><strong>Registered:</strong> ${data.createdAt || '(unknown)'}</p>
+          <p><strong>Username:</strong> ${escapeHtml(data.username || '(none)')}</p>
+          <p><strong>Email:</strong> ${escapeHtml(data.email || user.email || '(none)')}</p>
+          <p><strong>Civil ID:</strong> ${escapeHtml(data.civilId || '(unknown)')}</p>
+          <p><strong>Registered:</strong> ${escapeHtml(data.createdAt || '(unknown)')}</p>
         `;
 
-        // personalize the header
-        welcomeHeader.textContent = \`Peace be upon you, \${data.username || 'Citizen'} 🤝\`;
+        welcomeHeader.textContent = `Peace be upon you, ${data.username || 'Citizen'} 🤝`;
+
       } catch (err) {
-        profileDiv.textContent = 'Error loading data. Please try again later.';
+        console.error('Error loading user data', err);
+        debugLog('Error loading user data: ' + (err.message || String(err)));
+        profileDiv.textContent = 'Error loading data: ' + (err.message || 'Please try again later.');
       }
     });
 
-    logoutBtn.addEventListener('click', async () => {
-      await signOut(auth);
-      window.location.href = 'index.html';
-    });
+    // small helper to avoid HTML injection when rendering user input
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
   </script>
 </body>
 </html>
