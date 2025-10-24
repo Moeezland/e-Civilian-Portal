@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — Moeezland Control Center</title>
+  <style>
+    :root {
+      --bg: #0f1724;
+      --card: #111827;
+      --accent: #1e40af;
+      --muted: #94a3b8;
+      --text: #e6eef8;
+      --success: #16a34a;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, var(--bg), #071029 100%);
+      color: var(--text);
+    }
+    header {
+      background: linear-gradient(90deg, rgba(30,64,175,0.14), rgba(11,86,179,0.08));
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.6px;
+    }
+    header .controls {
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-weight:600;
+      cursor:pointer;
+    }
+    button.secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    main {
+      padding: 28px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .sidebar {
+      width: 260px;
+      background: rgba(255,255,255,0.02);
+      padding: 18px;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+    }
+    .sidebar h3 { margin-top:0; color: var(--muted); font-size: 13px; }
+    .content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 6px 20px rgba(2,6,23,0.7);
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .card .row { display:flex; gap: 8px; align-items:center; margin-bottom:8px; }
+    .card label { width: 140px; color: var(--muted); font-size: 13px; }
+    .card input[type="text"], .card input[type="date"], .card select {
+      flex: 1;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+      color: var(--text);
+      border-radius: 8px;
+      outline: none;
+    }
+    .card .meta { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .card .actions {
+      display:flex;
+      gap:8px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .status {
+      font-size: 13px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.02);
+      color: var(--muted);
+    }
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      background: rgba(255,255,255,0.04);
+      padding: 12px 16px;
+      border-radius: 10px;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.03);
+      box-shadow: 0 6px 20px rgba(2,6,23,0.7);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Moeezland — Admin Control Center</h1>
+    <div class="controls">
+      <div style="color:var(--muted); font-size:13px; margin-right:8px;">Admin</div>
+      <button id="refreshBtn" class="secondary">Refresh</button>
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <aside class="sidebar">
+      <h3>Overview</h3>
+      <p style="color:var(--muted); font-size:14px; margin:0 0 12px 0;">
+        Manage citizen records — edit fields, then press <strong>Save Changes</strong> per card.
+      </p>
+      <div style="margin-top:12px;">
+        <div style="color:var(--muted); font-size:13px;">Tip</div>
+        <div style="font-size:13px; margin-top:6px; color: #cfe3ff;">
+          Use Save per card to avoid partial edits being lost during load-shedding.
+        </div>
+      </div>
+    </aside>
+
+    <section class="content" id="content">
+      <!-- user cards will be injected here -->
+    </section>
+  </main>
+
+  <div id="toast" class="toast" style="display:none;"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import {
+      getFirestore, collection, getDocs, doc, getDoc,
+      updateDoc, serverTimestamp, query, orderBy
+    } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
+      authDomain: "e-civilian-portal2007.firebaseapp.com",
+      projectId: "e-civilian-portal2007",
+      storageBucket: "e-civilian-portal2007.firebasestorage.app",
+      messagingSenderId: "465001179759",
+      appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const content = document.getElementById('content');
+    const toast = document.getElementById('toast');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function showToast(msg, timeout = 3000) {
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', timeout);
+    }
+
+    async function ensureAdmin(user) {
+      // fetch user's doc to confirm role
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userDocRef);
+        if (!userSnap.exists()) return false;
+        const data = userSnap.data();
+        return data.role === 'admin';
+      } catch (err) {
+        console.error('admin check failed', err);
+        return false;
+      }
+    }
+
+    function createCard(docId, data) {
+      // normalize values so undefined becomes empty string
+      const get = (k) => (data[k] !== undefined && data[k] !== null) ? data[k] : '';
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="meta"><strong>${escapeHtml(get('username') || '(no username)')}</strong> — ${escapeHtml(get('email') || '(no email)')}</div>
+
+        <div class="row"><label>UID / Doc ID</label><div style="flex:1; color:var(--muted);">${escapeHtml(docId)}</div></div>
+        <div class="row"><label>Civil ID</label><div style="flex:1; color:var(--muted);">${escapeHtml(get('civilId') || '(unknown)')}</div></div>
+        <div class="row"><label>Registered</label><div style="flex:1; color:var(--muted);">${escapeHtml(get('createdAt') || '(unknown)')}</div></div>
+
+        <hr style="border:none; height:8px;">
+
+        <div class="row"><label>Legal Name</label><input data-key="legalName" type="text" value="${escapeHtml(get('legalName'))}" /></div>
+        <div class="row"><label>Sex</label>
+          <select data-key="sex">
+            <option value="">(not provided)</option>
+            <option ${get('sex') === 'male' ? 'selected' : ''} value="male">male</option>
+            <option ${get('sex') === 'female' ? 'selected' : ''} value="female">female</option>
+            <option ${get('sex') === 'other' ? 'selected' : ''} value="other">other</option>
+          </select>
+        </div>
+
+        <div class="row"><label>Date of Birth</label><input data-key="dob" type="date" value="${escapeHtml(get('dob'))}" /></div>
+        <div class="row"><label>Population #</label><input data-key="populationNumber" type="text" value="${escapeHtml(get('populationNumber'))}" /></div>
+
+        <div class="row"><label>Verified Driver?</label>
+          <select data-key="verifiedDriver">
+            <option value="">(not provided)</option>
+            <option ${get('verifiedDriver') === 'yes' ? 'selected' : ''} value="yes">yes</option>
+            <option ${get('verifiedDriver') === 'no' ? 'selected' : ''} value="no">no</option>
+          </select>
+        </div>
+
+        <div class="row"><label>Status</label>
+          <select data-key="status">
+            <option value="">(not provided)</option>
+            <option ${get('status') === 'inside the kingdom' ? 'selected' : ''} value="inside the kingdom">inside the kingdom</option>
+            <option ${get('status') === 'outside the kingdom' ? 'selected' : ''} value="outside the kingdom">outside the kingdom</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button class="saveBtn">Save Changes</button>
+          <button class="secondary viewBtn">View Full</button>
+        </div>
+      `;
+
+      // Save handler
+      const saveBtn = card.querySelector('.saveBtn');
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        try {
+          // collect only the admin-editable fields
+          const payload = {};
+          card.querySelectorAll('[data-key]').forEach(el => {
+            const key = el.getAttribute('data-key');
+            let val = el.value;
+            // normalize empty strings to empty string (will create field)
+            payload[key] = val;
+          });
+
+          // add an updatedAt timestamp (optional)
+          payload.updatedAt = new Date().toISOString();
+
+          await updateDoc(doc(db, 'users', docId), payload);
+          showToast('Saved ✔');
+        } catch (err) {
+          console.error(err);
+          showToast('Save failed: ' + (err.message || err));
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Changes';
+        }
+      });
+
+      // View Full opens a quick profile in new tab (optional)
+      const viewBtn = card.querySelector('.viewBtn');
+      viewBtn.addEventListener('click', () => {
+        // open dashboard in new tab with a query param to optionally see that user (not implemented server-side)
+        // We keep this simple: open dashboard.html and admin can manually search UID if needed.
+        window.open('dashboard.html', '_blank');
+      });
+
+      return card;
+    }
+
+    // escape to avoid naive XSS in UI (values come from Firestore)
+    function escapeHtml(s) {
+      if (!s && s !== 0) return '';
+      return String(s)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    async function loadAllUsers() {
+      content.innerHTML = '<div style="color:var(--muted); padding:18px;">Loading users...</div>';
+      try {
+        // fetch all users, order by createdAt if available
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, /*orderBy('createdAt', 'desc')*/);
+        const snap = await getDocs(q);
+        content.innerHTML = '';
+        if (snap.empty) {
+          content.innerHTML = '<div style="color:var(--muted); padding:18px;">No users found.</div>';
+          return;
+        }
+        snap.forEach(docSnap => {
+          const card = createCard(docSnap.id, docSnap.data());
+          content.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+        content.innerHTML = '<div style="color:tomato; padding:18px;">Failed to load users.</div>';
+      }
+    }
+
+    // AUTH & ADMIN CHECK
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const ok = await ensureAdmin(user);
+      if (!ok) {
+        // not admin — redirect to dashboard
+        alert('Access denied: admin only.');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // load users
+      await loadAllUsers();
+    });
+
+    refreshBtn.addEventListener('click', () => loadAllUsers());
+
+    logoutBtn.addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>
