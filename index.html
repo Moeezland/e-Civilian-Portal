@@ -15,17 +15,14 @@
       min-height: 100vh;
       margin: 0;
     }
-
     .logo {
       text-align: center;
       margin-bottom: 20px;
     }
-
     .logo img {
       width: 420px;
       max-width: 90%;
     }
-
     .container {
       background: white;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
@@ -34,13 +31,11 @@
       width: 360px;
       text-align: center;
     }
-
     h1 {
       font-size: 1.3rem;
       color: #0b56b3;
       margin-bottom: 16px;
     }
-
     label {
       font-weight: 500;
       display: block;
@@ -48,7 +43,6 @@
       text-align: left;
       color: #333;
     }
-
     input {
       width: 100%;
       padding: 10px;
@@ -57,7 +51,6 @@
       margin-bottom: 10px;
       font-size: 14px;
     }
-
     button {
       background-color: #0b56b3;
       color: white;
@@ -71,26 +64,23 @@
       margin-top: 5px;
       transition: background 0.3s;
     }
-
     button:hover {
       background-color: #084a9c;
     }
-
     .switch {
       margin-top: 15px;
       font-size: 14px;
       color: #333;
     }
-
     .switch span {
       color: #0b56b3;
       font-weight: 600;
       cursor: pointer;
     }
-
     #message {
       color: red;
       margin-top: 10px;
+      min-height: 20px;
     }
   </style>
 </head>
@@ -103,47 +93,58 @@
   <div class="container">
     <h1>Moeezland e-Civilian Portal</h1>
 
-    <!-- Login Section -->
+    <!-- Login -->
     <div id="loginSection">
       <label>Username</label>
-      <input type="text" id="loginEmail" placeholder="Enter your username" />
+      <input type="text" id="loginUsername" placeholder="Enter your username" />
       <label>Password</label>
       <input type="password" id="loginPassword" placeholder="Enter your password" />
       <button id="loginBtn">Login</button>
       <div class="switch">
-        Don’t have an account? <span id="switchToRegister">Register</span>
+        Don’t have an account? <span id="toRegister">Register</span>
       </div>
     </div>
 
-    <!-- Register Section -->
+    <!-- Register -->
     <div id="registerSection" style="display:none;">
       <label>Username (unique)</label>
-      <input type="text" id="username" placeholder="Your username" />
+      <input type="text" id="regUsername" placeholder="Your username" />
       <label>Email</label>
-      <input type="email" id="registerEmail" placeholder="Your email" />
+      <input type="email" id="regEmail" placeholder="Your email" />
       <label>Password</label>
-      <input type="password" id="registerPassword" placeholder="Your password" />
+      <input type="password" id="regPassword" placeholder="Your password" />
       <label>Civil ID</label>
       <input type="text" id="civilId" placeholder="10-digit Civil ID" />
       <button id="registerBtn">Create Account</button>
       <div class="switch">
-        Already have an account? <span id="switchToLogin">Login</span>
+        Already have an account? <span id="toLogin">Login</span>
       </div>
     </div>
 
     <p id="message"></p>
   </div>
 
-  <!-- Firebase Script -->
+  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-    import { 
-      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword 
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword
     } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-    import { 
-      getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs 
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      collection,
+      query,
+      where,
+      getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
+    /* --------------------  YOUR FIREBASE CONFIG HERE  -------------------- */
     const firebaseConfig = {
       apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
       authDomain: "e-civilian-portal2007.firebaseapp.com",
@@ -152,36 +153,38 @@
       messagingSenderId: "465001179759",
       appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
     };
+    /* -------------------------------------------------------------------- */
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const loginSection = document.getElementById('loginSection');
-    const registerSection = document.getElementById('registerSection');
-    const switchToRegister = document.getElementById('switchToRegister');
-    const switchToLogin = document.getElementById('switchToLogin');
-    const message = document.getElementById('message');
+    const loginSection = document.getElementById("loginSection");
+    const registerSection = document.getElementById("registerSection");
+    const toRegister = document.getElementById("toRegister");
+    const toLogin = document.getElementById("toLogin");
+    const message = document.getElementById("message");
 
-    switchToRegister.onclick = () => {
-      loginSection.style.display = 'none';
-      registerSection.style.display = 'block';
-      message.textContent = '';
+    // Toggle between login/register
+    toRegister.onclick = () => {
+      loginSection.style.display = "none";
+      registerSection.style.display = "block";
+      message.textContent = "";
+    };
+    toLogin.onclick = () => {
+      registerSection.style.display = "none";
+      loginSection.style.display = "block";
+      message.textContent = "";
     };
 
-    switchToLogin.onclick = () => {
-      registerSection.style.display = 'none';
-      loginSection.style.display = 'block';
-      message.textContent = '';
-    };
-
-    document.getElementById('registerBtn').addEventListener('click', async () => {
-      const username = document.getElementById('username').value.trim();
+    /* =========================  REGISTER  ========================= */
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      const username = document.getElementById("regUsername").value.trim();
       const usernameLower = username.toLowerCase();
-      const email = document.getElementById('registerEmail').value.trim();
+      const email = document.getElementById("regEmail").value.trim();
       const emailLower = email.toLowerCase();
-      const password = document.getElementById('registerPassword').value.trim();
-      const civilId = document.getElementById('civilId').value.trim();
+      const password = document.getElementById("regPassword").value.trim();
+      const civilId = document.getElementById("civilId").value.trim();
 
       if (!username || !email || !password || !civilId) {
         message.textContent = "Please fill in all fields.";
@@ -189,29 +192,28 @@
       }
 
       try {
+        // validate civil ID
         const civilRef = doc(db, "civil_ids", civilId);
         const civilSnap = await getDoc(civilRef);
-
         if (!civilSnap.exists()) {
           message.textContent = "Invalid Civil ID.";
           return;
         }
-
         if (civilSnap.data().used) {
           message.textContent = "This Civil ID is already registered.";
           return;
         }
 
-        // ✅ Username uniqueness (case-insensitive)
+        // username uniqueness
         const usersRef = collection(db, "users");
         const usernameQuery = query(usersRef, where("username_lower", "==", usernameLower));
         const usernameSnap = await getDocs(usernameQuery);
         if (!usernameSnap.empty) {
-          message.textContent = "This username is already taken. Please choose another.";
+          message.textContent = "This username is already taken.";
           return;
         }
 
-        // ✅ Email uniqueness (case-insensitive)
+        // email uniqueness
         const emailQuery = query(usersRef, where("email_lower", "==", emailLower));
         const emailSnap = await getDocs(emailQuery);
         if (!emailSnap.empty) {
@@ -219,18 +221,20 @@
           return;
         }
 
+        // create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // create Firestore doc with default fields
         await setDoc(doc(db, "users", user.uid), {
           username,
           username_lower: usernameLower,
           email,
           email_lower: emailLower,
           civilId,
-          createdAt: new Date().toISOString()
-          
-          // new fields (start empty)
+          createdAt: new Date().toISOString(),
+
+          // extra fields start empty
           legalName: "",
           sex: "",
           dob: "",
@@ -248,10 +252,10 @@
       }
     });
 
-    // ✅ LOGIN USING USERNAME (case-insensitive)
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      const usernameInput = document.getElementById('loginEmail').value.trim().toLowerCase();
-      const password = document.getElementById('loginPassword').value.trim();
+    /* =========================  LOGIN  ========================= */
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const usernameInput = document.getElementById("loginUsername").value.trim().toLowerCase();
+      const password = document.getElementById("loginPassword").value.trim();
 
       if (!usernameInput || !password) {
         message.textContent = "Please fill in all fields.";
@@ -259,7 +263,7 @@
       }
 
       try {
-        // 🔍 Find user by username_lower
+        // find user by username_lower
         const usersRef = collection(db, "users");
         const usernameQuery = query(usersRef, where("username_lower", "==", usernameInput));
         const usernameSnap = await getDocs(usernameQuery);
@@ -269,11 +273,10 @@
           return;
         }
 
-        // ✅ Get email from user record
         const userDoc = usernameSnap.docs[0].data();
         const userEmail = userDoc.email;
 
-        // 🔐 Sign in using the email behind the scenes
+        // login via email
         await signInWithEmailAndPassword(auth, userEmail, password);
 
         alert("Login successful!");
@@ -284,3 +287,4 @@
     });
   </script>
 </body>
+</html>
