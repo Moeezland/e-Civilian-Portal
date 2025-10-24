@@ -98,13 +98,6 @@
   </div>
 
   <div class="container">
-    <!-- PROFILE PICTURE (100x100) -->
-    <div style="text-align:center; margin-bottom:15px;">
-      <img id="profilePic" src="default-avatar.jpg"
-           alt="Profile Picture"
-           style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #ccc;">
-    </div>
-
     <h1>Moeezland e-Civilian Dashboard</h1>
     <div id="profile">Loading your information...</div>
     <button id="logoutBtn">Logout</button>
@@ -153,13 +146,6 @@
         }
 
         const data = userSnap.data();
-
-        // set profile picture (100x100)
-        const pic = document.getElementById('profilePic');
-        pic.src = data.profilePicUrl && String(data.profilePicUrl).trim() !== ""
-          ? data.profilePicUrl
-          : "default-avatar.png";
-
         profileDiv.innerHTML = `
           <div class="field"><strong>Username:</strong> ${displayOrDefault(data.username || '(none)')}</div>
           <div class="field"><strong>Email:</strong> ${displayOrDefault(data.email || user.email)}</div>
