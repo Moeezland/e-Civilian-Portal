@@ -224,11 +224,19 @@
 
         await setDoc(doc(db, "users", user.uid), {
           username,
-          username_lower: usernameLower,
+          username_lower,
           email,
-          email_lower: emailLower,
+          email_lower,
           civilId,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+
+          // new fields (start empty)
+          legalName: "",
+          sex: "",
+          dob: "",
+          populationNumber: "",
+          verifiedDriver: "",
+          status: ""
         });
 
         await updateDoc(civilRef, { used: true });
@@ -276,4 +284,5 @@
     });
   </script>
 </body>
+
 </html>
