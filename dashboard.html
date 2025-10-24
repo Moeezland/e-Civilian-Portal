@@ -44,7 +44,7 @@
       border-radius: 12px;
       padding: 30px 40px;
       width: 360px;
-      text-align: center;
+      text-align: left; /* changed from center to left */
       margin-top: 25px;
     }
 
@@ -52,6 +52,7 @@
       font-size: 1.4rem;
       color: #0b56b3;
       margin-bottom: 16px;
+      text-align: center; /* keep title centered */
     }
 
     p {
@@ -144,7 +145,7 @@
         `;
 
         // personalize the header
-        welcomeHeader.textContent = `Peace be upon you, ${data.username || 'Citizen'} 🤝`;
+        welcomeHeader.textContent = \`Peace be upon you, \${data.username || 'Citizen'} 🤝\`;
       } catch (err) {
         profileDiv.textContent = 'Error loading data. Please try again later.';
       }
