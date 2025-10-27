@@ -15,7 +15,6 @@
       min-height: 100vh;
     }
 
-    /* HEADER */
     header {
       background-color: #0b56b3;
       color: white;
@@ -28,7 +27,6 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
-    /* LOGO */
     .logo {
       text-align: center;
       margin-top: 35px;
@@ -39,7 +37,6 @@
       max-width: 85%;
     }
 
-    /* MAIN DASHBOARD LAYOUT */
     .dashboard {
       display: flex;
       flex-direction: column;
@@ -51,7 +48,6 @@
       margin-bottom: 60px;
     }
 
-    /* PROFILE CARD */
     .profile-card {
       background: #ffffff;
       box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
@@ -88,7 +84,6 @@
       color: #666;
     }
 
-    /* SERVICE GRID */
     .services {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -126,7 +121,6 @@
       font-weight: 600;
     }
 
-    /* DISABLED SERVICE CARD */
     .service-card.disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -139,7 +133,6 @@
       box-shadow: none;
     }
 
-    /* LOGOUT BUTTON */
     #logoutBtn {
       background-color: #0b56b3;
       color: #fff;
@@ -209,6 +202,17 @@
       <div class="service-card disabled">
         <img src="vote.png" alt="Vote Now! Unavailable right now!">
         <h3>Voting (التصويت) <br>Unavailable (غير متاح)</h3>
+      </div>
+
+      <!-- Newly Added -->
+      <div class="service-card" onclick="window.open('https://forms.gle/Hy8a9PHGkweNnxre7', '_blank')">
+        <img src="f0727ec9-2f13-4644-bb6f-780726f0a201.png" alt="Family Services (الخدمات الأسرية)">
+        <h3>Family Services (الخدمات الأسرية)</h3>
+      </div>
+
+      <div class="service-card" onclick="window.open('https://forms.gle/Hy8a9PHGkweNnxre7', '_blank')">
+        <img src="9471a994-3c51-4668-adc1-20094f1ab0fe.png" alt="Prisoner Services (خدمات السجناء)">
+        <h3>Prisoner Services (خدمات السجناء)</h3>
       </div>
     </div>
 
