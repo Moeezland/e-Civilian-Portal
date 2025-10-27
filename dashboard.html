@@ -286,7 +286,7 @@
           <div class="field"><strong>Passport Number:</strong> ${displayOrDefault(data.passportnumber)}</div>
         `;
 
-        welcomeHeader.textContent = `Peace be upon you, ${data.username || 'Citizen'} 🤝`;
+        welcomeHeader.textContent = `Ya Hala!, ${data.username || 'Citizen'} 🤝`;
       } catch (err) {
         console.error(err);
         profileDiv.textContent = 'Error loading data. Please try again later.';
