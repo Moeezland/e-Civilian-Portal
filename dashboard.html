@@ -279,7 +279,25 @@
           <div class="field"><strong>Legal Name:</strong> ${displayOrDefault(data.legalName)}</div>
           <div class="field"><strong>Sex:</strong> ${displayOrDefault(data.sex)}</div>
           <div class="field"><strong>Date of Birth:</strong> ${displayOrDefault(data.dob)}</div>
-          <div class="field"><strong>Digital ID:</strong> ${displayOrDefault(data.digitalid)}</div>
+          <div class="field">
+  <strong>Digital ID:</strong>
+  ${
+    data.digitalid
+      ? `<button onclick="window.open('${data.digitalid}', '_blank')" 
+          style="
+            background:#0b56b3;
+            color:white;
+            border:none;
+            padding:6px 12px;
+            border-radius:6px;
+            cursor:pointer;
+            font-size:14px;
+          ">
+          View Digital ID
+        </button>`
+      : '<span class="muted">(not provided)</span>'
+  }
+</div>
         `;
 
         welcomeHeader.textContent = `Ya Hala!, ${data.username || 'Citizen'} 🤝`;
