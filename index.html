@@ -97,9 +97,20 @@
     <div id="loginSection">
       <label>Username</label>
       <input type="text" id="loginUsername" placeholder="Enter your username" />
+
+      <!-- ⭐ EMAIL FIELD (OPTION A) -->
+      <label style="margin-top:10px;">Or enter Email (optional)</label>
+      <input type="email" id="resetEmailInput" placeholder="Enter your email for password reset" />
+
       <label>Password</label>
       <input type="password" id="loginPassword" placeholder="Enter your password" />
       <button id="loginBtn">Login</button>
+
+      <!-- ⭐ RESET PASSWORD LINK -->
+      <div class="switch" style="margin-top: 10px;">
+        <span id="resetPasswordLink">Forgot password?</span>
+      </div>
+
       <div class="switch">
         Don’t have an account? <span id="toRegister">Register</span>
       </div>
@@ -124,13 +135,49 @@
     <p id="message"></p>
   </div>
 
+  <!-- ⭐ PASSWORD RESET SUCCESS POPUP MODAL -->
+  <div id="resetModal" style="
+    display:none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  ">
+    <div style="
+      background: white;
+      padding: 25px 30px;
+      border-radius: 12px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 2px 18px rgba(0,0,0,0.25);
+    ">
+      <h3 style="color:#0b56b3; margin-top:0;">Password Reset Email Sent</h3>
+      <p style="margin:10px 0 20px;">
+        A reset link has been sent to your email address.
+      </p>
+      <button id="closeResetModal" style="
+        background:#0b56b3;
+        color:white;
+        width:100%;
+        border:none;
+        padding:10px;
+        border-radius:8px;
+        font-size:14px;
+        cursor:pointer;
+      ">Okay</button>
+    </div>
+  </div>
+
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
     import {
       getAuth,
       createUserWithEmailAndPassword,
-      signInWithEmailAndPassword
+      signInWithEmailAndPassword,
+      sendPasswordResetEmail
     } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
     import {
       getFirestore,
@@ -170,11 +217,13 @@
       loginSection.style.display = "none";
       registerSection.style.display = "block";
       message.textContent = "";
+      message.style.color = "red";
     };
     toLogin.onclick = () => {
       registerSection.style.display = "none";
       loginSection.style.display = "block";
       message.textContent = "";
+      message.style.color = "red";
     };
 
     /* =========================  REGISTER  ========================= */
@@ -192,7 +241,6 @@
       }
 
       try {
-        // validate civil ID
         const civilRef = doc(db, "civil_ids", civilId);
         const civilSnap = await getDoc(civilRef);
         if (!civilSnap.exists()) {
@@ -204,7 +252,6 @@
           return;
         }
 
-        // username uniqueness
         const usersRef = collection(db, "users");
         const usernameQuery = query(usersRef, where("username_lower", "==", usernameLower));
         const usernameSnap = await getDocs(usernameQuery);
@@ -213,7 +260,6 @@
           return;
         }
 
-        // email uniqueness
         const emailQuery = query(usersRef, where("email_lower", "==", emailLower));
         const emailSnap = await getDocs(emailQuery);
         if (!emailSnap.empty) {
@@ -221,11 +267,9 @@
           return;
         }
 
-        // create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // create Firestore doc with default fields
         await setDoc(doc(db, "users", user.uid), {
           username,
           username_lower: usernameLower,
@@ -233,13 +277,10 @@
           email_lower: emailLower,
           civilId,
           createdAt: new Date().toISOString(),
-
-          // extra fields start empty
           legalName: "",
           sex: "",
           dob: "",
-          digitalid: "",
-          
+          digitalid: ""
         });
 
         await updateDoc(civilRef, { used: true });
@@ -262,7 +303,6 @@
       }
 
       try {
-        // find user by username_lower
         const usersRef = collection(db, "users");
         const usernameQuery = query(usersRef, where("username_lower", "==", usernameInput));
         const usernameSnap = await getDocs(usernameQuery);
@@ -275,7 +315,6 @@
         const userDoc = usernameSnap.docs[0].data();
         const userEmail = userDoc.email;
 
-        // login via email
         await signInWithEmailAndPassword(auth, userEmail, password);
 
         alert("Login successful!");
@@ -284,13 +323,53 @@
         message.textContent = `Firebase: ${error.message}`;
       }
     });
+
+    /* ========================= RESET PASSWORD (IMPROVED) ========================= */
+    document.getElementById("resetPasswordLink").addEventListener("click", async () => {
+      message.style.color = "red";
+
+      const usernameInput = document.getElementById("loginUsername").value.trim().toLowerCase();
+      const emailInput = document.getElementById("resetEmailInput").value.trim().toLowerCase();
+
+      let targetEmail = "";
+
+      try {
+        if (emailInput) {
+          targetEmail = emailInput;
+        } else {
+          if (!usernameInput) {
+            message.textContent = "Enter username OR email to reset password.";
+            return;
+          }
+
+          const usersRef = collection(db, "users");
+          const usernameQuery = query(usersRef, where("username_lower", "==", usernameInput));
+          const usernameSnap = await getDocs(usernameQuery);
+
+          if (usernameSnap.empty) {
+            message.textContent = "No account found with that username.";
+            return;
+          }
+
+          const userDoc = usernameSnap.docs[0].data();
+          targetEmail = userDoc.email;
+        }
+
+        await sendPasswordResetEmail(auth, targetEmail);
+
+        document.getElementById("resetModal").style.display = "flex";
+
+        message.textContent = "";
+      }
+      catch (error) {
+        message.textContent = `Error: ${error.message}`;
+      }
+    });
+
+    document.getElementById("closeResetModal").onclick = () => {
+      document.getElementById("resetModal").style.display = "none";
+    };
   </script>
 </body>
 
 </html>
-
-
-
-
-
-
