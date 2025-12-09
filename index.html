@@ -62,10 +62,6 @@
       font-size: 15px;
       font-weight: 600;
       margin-top: 5px;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background-color: #084a9c;
     }
     .switch {
       margin-top: 15px;
@@ -96,19 +92,15 @@
     <!-- Login -->
     <div id="loginSection">
       <label>Username</label>
-      <input type="text" id="loginUsername" placeholder="Enter your username" />
-
-      <!-- ⭐ EMAIL FIELD (OPTION A) -->
-      <label style="margin-top:10px;">Or enter Email (optional)</label>
-      <input type="email" id="resetEmailInput" placeholder="Enter your email for password reset" />
+      <input type="text" id="loginUsername" placeholder="Enter your username">
 
       <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="Enter your password" />
+      <input type="password" id="loginPassword" placeholder="Enter your password">
+
       <button id="loginBtn">Login</button>
 
-      <!-- ⭐ RESET PASSWORD LINK -->
-      <div class="switch" style="margin-top: 10px;">
-        <span id="resetPasswordLink">Forgot password?</span>
+      <div class="switch" style="margin-top:10px;">
+        <span onclick="window.location.href='reset.html'">Forgot password?</span>
       </div>
 
       <div class="switch">
@@ -119,13 +111,13 @@
     <!-- Register -->
     <div id="registerSection" style="display:none;">
       <label>Username (unique)</label>
-      <input type="text" id="regUsername" placeholder="Your username" />
+      <input type="text" id="regUsername" placeholder="Your username">
       <label>Email</label>
-      <input type="email" id="regEmail" placeholder="Your email" />
+      <input type="email" id="regEmail" placeholder="Your email">
       <label>Password</label>
-      <input type="password" id="regPassword" placeholder="Your password" />
+      <input type="password" id="regPassword" placeholder="Your password">
       <label>Civil ID</label>
-      <input type="text" id="civilId" placeholder="10-digit Civil ID" />
+      <input type="text" id="civilId" placeholder="10-digit Civil ID">
       <button id="registerBtn">Create Account</button>
       <div class="switch">
         Already have an account? <span id="toLogin">Login</span>
@@ -135,241 +127,111 @@
     <p id="message"></p>
   </div>
 
-  <!-- ⭐ PASSWORD RESET SUCCESS POPUP MODAL -->
-  <div id="resetModal" style="
-    display:none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  ">
-    <div style="
-      background: white;
-      padding: 25px 30px;
-      border-radius: 12px;
-      width: 320px;
-      text-align: center;
-      box-shadow: 0 2px 18px rgba(0,0,0,0.25);
-    ">
-      <h3 style="color:#0b56b3; margin-top:0;">Password Reset Email Sent</h3>
-      <p style="margin:10px 0 20px;">
-        A reset link has been sent to your email address.
-      </p>
-      <button id="closeResetModal" style="
-        background:#0b56b3;
-        color:white;
-        width:100%;
-        border:none;
-        padding:10px;
-        border-radius:8px;
-        font-size:14px;
-        cursor:pointer;
-      ">Okay</button>
-    </div>
-  </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-    import {
-      getAuth,
-      createUserWithEmailAndPassword,
-      signInWithEmailAndPassword,
-      sendPasswordResetEmail
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc,
-      setDoc,
-      updateDoc,
-      collection,
-      query,
-      where,
-      getDocs
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
+  authDomain: "e-civilian-portal2007.firebaseapp.com",
+  projectId: "e-civilian-portal2007",
+  storageBucket: "e-civilian-portal2007.firebasestorage.app",
+  messagingSenderId: "465001179759",
+  appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
+};
 
-    /* --------------------  YOUR FIREBASE CONFIG HERE  -------------------- */
-    const firebaseConfig = {
-      apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
-      authDomain: "e-civilian-portal2007.firebaseapp.com",
-      projectId: "e-civilian-portal2007",
-      storageBucket: "e-civilian-portal2007.firebasestorage.app",
-      messagingSenderId: "465001179759",
-      appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
-    };
-    /* -------------------------------------------------------------------- */
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+const loginSection = document.getElementById("loginSection");
+const registerSection = document.getElementById("registerSection");
+const toRegister = document.getElementById("toRegister");
+const toLogin = document.getElementById("toLogin");
+const message = document.getElementById("message");
 
-    const loginSection = document.getElementById("loginSection");
-    const registerSection = document.getElementById("registerSection");
-    const toRegister = document.getElementById("toRegister");
-    const toLogin = document.getElementById("toLogin");
-    const message = document.getElementById("message");
+toRegister.onclick = () => {
+  loginSection.style.display = "none";
+  registerSection.style.display = "block";
+  message.textContent = "";
+};
 
-    // Toggle between login/register
-    toRegister.onclick = () => {
-      loginSection.style.display = "none";
-      registerSection.style.display = "block";
-      message.textContent = "";
-      message.style.color = "red";
-    };
-    toLogin.onclick = () => {
-      registerSection.style.display = "none";
-      loginSection.style.display = "block";
-      message.textContent = "";
-      message.style.color = "red";
-    };
+toLogin.onclick = () => {
+  registerSection.style.display = "none";
+  loginSection.style.display = "block";
+  message.textContent = "";
+};
 
-    /* =========================  REGISTER  ========================= */
-    document.getElementById("registerBtn").addEventListener("click", async () => {
-      const username = document.getElementById("regUsername").value.trim();
-      const usernameLower = username.toLowerCase();
-      const email = document.getElementById("regEmail").value.trim();
-      const emailLower = email.toLowerCase();
-      const password = document.getElementById("regPassword").value.trim();
-      const civilId = document.getElementById("civilId").value.trim();
+/* REGISTER */
+document.getElementById("registerBtn").onclick = async () => {
+  const username = regUsername.value.trim();
+  const email = regEmail.value.trim().toLowerCase();
+  const password = regPassword.value.trim();
+  const civilId = civilIdInput = civilId.value.trim();
 
-      if (!username || !email || !password || !civilId) {
-        message.textContent = "Please fill in all fields.";
-        return;
-      }
+  if (!username || !email || !password || !civilId) {
+    message.textContent = "Please fill in all fields.";
+    return;
+  }
 
-      try {
-        const civilRef = doc(db, "civil_ids", civilId);
-        const civilSnap = await getDoc(civilRef);
-        if (!civilSnap.exists()) {
-          message.textContent = "Invalid Civil ID.";
-          return;
-        }
-        if (civilSnap.data().used) {
-          message.textContent = "This Civil ID is already registered.";
-          return;
-        }
-
-        const usersRef = collection(db, "users");
-        const usernameQuery = query(usersRef, where("username_lower", "==", usernameLower));
-        const usernameSnap = await getDocs(usernameQuery);
-        if (!usernameSnap.empty) {
-          message.textContent = "This username is already taken.";
-          return;
-        }
-
-        const emailQuery = query(usersRef, where("email_lower", "==", emailLower));
-        const emailSnap = await getDocs(emailQuery);
-        if (!emailSnap.empty) {
-          message.textContent = "This email is already registered.";
-          return;
-        }
-
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        await setDoc(doc(db, "users", user.uid), {
-          username,
-          username_lower: usernameLower,
-          email,
-          email_lower: emailLower,
-          civilId,
-          createdAt: new Date().toISOString(),
-          legalName: "",
-          sex: "",
-          dob: "",
-          digitalid: ""
-        });
-
-        await updateDoc(civilRef, { used: true });
-
-        alert("Account created successfully!");
-        window.location.href = "dashboard.html";
-      } catch (error) {
-        message.textContent = `Firebase: ${error.message}`;
-      }
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await setDoc(doc(db, "users", userCredential.user.uid), {
+      username,
+      username_lower: username.toLowerCase(),
+      email,
+      email_lower: email,
+      civilId,
+      createdAt: new Date().toISOString()
     });
 
-    /* =========================  LOGIN  ========================= */
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      const usernameInput = document.getElementById("loginUsername").value.trim().toLowerCase();
-      const password = document.getElementById("loginPassword").value.trim();
+    alert("Account created successfully!");
+    window.location.href = "dashboard.html";
+  } catch (e) {
+    message.textContent = e.message;
+  }
+};
 
-      if (!usernameInput || !password) {
-        message.textContent = "Please fill in all fields.";
-        return;
-      }
+/* LOGIN */
+document.getElementById("loginBtn").onclick = async () => {
+  const username = loginUsername.value.trim().toLowerCase();
+  const password = loginPassword.value.trim();
+  if (!username || !password) {
+    message.textContent = "Please fill in all fields.";
+    return;
+  }
 
-      try {
-        const usersRef = collection(db, "users");
-        const usernameQuery = query(usersRef, where("username_lower", "==", usernameInput));
-        const usernameSnap = await getDocs(usernameQuery);
+  try {
+    const q = query(collection(db, "users"), where("username_lower", "==", username));
+    const snap = await getDocs(q);
 
-        if (usernameSnap.empty) {
-          message.textContent = "No account found with that username.";
-          return;
-        }
+    if (snap.empty) {
+      message.textContent = "User not found.";
+      return;
+    }
 
-        const userDoc = usernameSnap.docs[0].data();
-        const userEmail = userDoc.email;
-
-        await signInWithEmailAndPassword(auth, userEmail, password);
-
-        alert("Login successful!");
-        window.location.href = "dashboard.html";
-      } catch (error) {
-        message.textContent = `Firebase: ${error.message}`;
-      }
-    });
-
-    /* ========================= RESET PASSWORD (IMPROVED) ========================= */
-    document.getElementById("resetPasswordLink").addEventListener("click", async () => {
-      message.style.color = "red";
-
-      const usernameInput = document.getElementById("loginUsername").value.trim().toLowerCase();
-      const emailInput = document.getElementById("resetEmailInput").value.trim().toLowerCase();
-
-      let targetEmail = "";
-
-      try {
-        if (emailInput) {
-          targetEmail = emailInput;
-        } else {
-          if (!usernameInput) {
-            message.textContent = "Enter username OR email to reset password.";
-            return;
-          }
-
-          const usersRef = collection(db, "users");
-          const usernameQuery = query(usersRef, where("username_lower", "==", usernameInput));
-          const usernameSnap = await getDocs(usernameQuery);
-
-          if (usernameSnap.empty) {
-            message.textContent = "No account found with that username.";
-            return;
-          }
-
-          const userDoc = usernameSnap.docs[0].data();
-          targetEmail = userDoc.email;
-        }
-
-        await sendPasswordResetEmail(auth, targetEmail);
-
-        document.getElementById("resetModal").style.display = "flex";
-
-        message.textContent = "";
-      }
-      catch (error) {
-        message.textContent = `Error: ${error.message}`;
-      }
-    });
-
-    document.getElementById("closeResetModal").onclick = () => {
-      document.getElementById("resetModal").style.display = "none";
-    };
-  </script>
+    const email = snap.docs[0].data().email;
+    await signInWithEmailAndPassword(auth, email, password);
+    window.location.href = "dashboard.html";
+  } catch (e) {
+    message.textContent = e.message;
+  }
+};
+</script>
 </body>
-
 </html>
