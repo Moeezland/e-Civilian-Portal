@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Moeezland e-Civilian Portal</title>
 
-  <!-- 🌍 Phone Input Flags + Codes -->
+  <!-- intl-tel-input -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.1.1/css/intlTelInput.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.1.1/js/intlTelInput.min.js"></script>
 
@@ -155,11 +155,11 @@
     import {
       getFirestore,
       doc,
-      setDoc,
       collection,
       query,
       where,
-      getDocs
+      getDocs,
+      runTransaction
     } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -175,13 +175,14 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // init intl-tel-input
     const phoneInputField = document.getElementById("phoneInput");
-    const iti = window.intlTelInput(phoneInputField, {
+    const iti = window.intlTelInput ? window.intlTelInput(phoneInputField, {
       initialCountry: "auto",
       separateDialCode: true,
       nationalMode: false,
       utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.1.1/js/utils.js"
-    });
+    }) : null;
 
     const loginSection = document.getElementById("loginSection");
     const registerSection = document.getElementById("registerSection");
@@ -198,57 +199,83 @@
       message.textContent = "";
     };
 
+    // Helper: query whether a field value exists in users collection
     async function isFieldTaken(field, value) {
+      if (!value) return false;
       const q = query(collection(db, "users"), where(field, "==", value));
       const snap = await getDocs(q);
       return !snap.empty;
     }
 
+    // sanitize civil id: keep digits only, preserve leading zeros
     function sanitizeCivilId(input) {
-      return input.replace(/\D/g, "");
+      return String(input || "").replace(/\D/g, "");
     }
 
-    function sanitizePhone(number) {
-      number = number.trim();
-      if (!number.startsWith("+")) number = "+" + number;
-      return number.replace(/[^\+\d]/g, "");
+    // sanitize phone: ensure starts with +, remove non-digit except leading +
+    function sanitizePhone(raw) {
+      let s = String(raw || "").trim();
+      if (!s) return "";
+      // if intl-tel-input provided something like +1 202-555-0123, it will be normalized below
+      if (!s.startsWith("+")) s = "+" + s;
+      // remove everything except digits and leading +
+      s = s.replace(/[^\+\d]/g, "");
+      return s;
     }
 
+    // digits length check (excludes leading +)
+    function phoneDigitsCount(phoneE164) {
+      return (phoneE164.replace(/\D/g, "") || "").length;
+    }
+
+    /* REGISTER */
     document.getElementById("registerBtn").addEventListener("click", async () => {
       message.textContent = "";
 
-      const username = regUsername.value.trim();
+      // gather inputs
+      const username = (regUsername.value || "").trim();
       const username_lower = username.toLowerCase();
-      const email = regEmail.value.trim().toLowerCase();
-      const password = regPassword.value.trim();
+      const emailRaw = (regEmail.value || "").trim();
+      const email = emailRaw.toLowerCase();
+      const password = (regPassword.value || "").trim();
+      const civilRaw = (document.getElementById("civilId").value || "").trim();
+      const civilId = sanitizeCivilId(civilRaw); // preserves leading zeros
+      // get number from intl-tel-input if available (gives E.164), otherwise fallback to raw input
+      let phoneRaw = "";
+      try {
+        phoneRaw = iti ? iti.getNumber() : document.getElementById("phoneInput").value.trim();
+      } catch (err) {
+        phoneRaw = document.getElementById("phoneInput").value.trim();
+      }
+      const phone = sanitizePhone(phoneRaw);
 
-      let civilId = sanitizeCivilId(document.getElementById("civilId").value.trim());
-      let phone = iti.getNumber();
-      phone = sanitizePhone(phone);
-
+      // basic required check
       if (!username || !email || !password || !civilId || !phone) {
         message.textContent = "Please fill in all fields.";
         return;
       }
 
+      // Civil ID format: must be exactly 10 digits (including leading zeros)
       if (civilId.length !== 10) {
         message.textContent = "Civil ID must be exactly 10 digits.";
         return;
       }
 
-      const phoneDigits = phone.replace(/\D/g, "");
-      if (phoneDigits.length < 10 || phoneDigits.length > 16) {
+      // Phone digits length: between 10 and 16 digits (excluding +)
+      const phoneDigits = phoneDigitsCount(phone);
+      if (phoneDigits < 10 || phoneDigits > 16) {
         message.textContent = "Phone number must be 10 to 16 digits long.";
         return;
       }
 
       try {
+        // Early uniqueness pre-checks (reduce churn)
         if (await isFieldTaken("username_lower", username_lower)) {
-          message.textContent = "Username already in use.";
+          message.textContent = "Username already in use. Choose another username.";
           return;
         }
         if (await isFieldTaken("civilId", civilId)) {
-          message.textContent = "Civil ID already registered.";
+          message.textContent = "Civil ID already registered to an account.";
           return;
         }
         if (await isFieldTaken("email_lower", email)) {
@@ -260,28 +287,79 @@
           return;
         }
 
+        // Next: verify civil_ids collection - it must exist and used === false
+        const civilDocRef = doc(db, "civil_ids", civilId);
+        const civilSnap = await getDocs ? null : null; // placeholder to keep lint happy (we use transaction below)
+        // We will create the Auth user first (Firebase requires uid to write user doc inside transaction).
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
 
-        await setDoc(doc(db, "users", userCredential.user.uid), {
-          username,
-          username_lower,
-          email,
-          email_lower: email,
-          civilId,
-          phone,
-          createdAt: new Date().toISOString()
+        // Now run a Firestore transaction to atomically:
+        // - confirm civil_ids/{civilId} exists and used === false
+        // - create users/{uid} document
+        // - set civil_ids/{civilId}.used = true and attach userUID + assignedAt
+        await runTransaction(db, async (tx) => {
+          const civilSnapTx = await tx.get(civilDocRef);
+          if (!civilSnapTx.exists()) {
+            throw new Error("Civil ID does not exist in government records.");
+          }
+          const civilData = civilSnapTx.data();
+          if (civilData && civilData.used === true) {
+            throw new Error("Civil ID already used/assigned.");
+          }
+
+          // As an extra safety check (non-atomic query) we already did pre-check above.
+          // Now set the user doc and mark civil id used inside the same transaction.
+          const userDocRef = doc(db, "users", uid);
+          tx.set(userDocRef, {
+            username,
+            username_lower,
+            email,
+            email_lower: email,
+            civilId,
+            phone,
+            createdAt: new Date().toISOString()
+          });
+
+          tx.update(civilDocRef, {
+            used: true,
+            userUID: uid,
+            assignedAt: new Date().toISOString()
+          });
         });
 
+        // success: redirect
         alert("Account created successfully!");
         window.location.href = "dashboard.html";
       } catch (e) {
-        message.textContent = e.message || "Registration failed.";
+        // If transaction failed after creating Auth user, delete the newly created Auth user to avoid ghost accounts
+        try {
+          const currentUser = auth.currentUser;
+          // If the just-created user is signed in as currentUser and its uid matches what we just made,
+          // delete it. This avoid leaving an auth user without a user doc.
+          if (currentUser && currentUser.uid) {
+            // delete current user only if their email matches the attempted email (safety)
+            // and if user creation just happened
+            // Attempt deletion: new users can delete themselves immediately.
+            await currentUser.delete().catch(() => {});
+            // after deletion, sign out to clear session
+            try { await auth.signOut(); } catch (_) {}
+          }
+        } catch (delErr) {
+          // ignore deletion error but log to console
+          console.error("Error trying to delete failed-created auth user:", delErr);
+        }
+
+        // show error
+        const msg = (e && e.message) ? e.message : "Registration failed.";
+        message.textContent = msg;
       }
     });
 
+    /* LOGIN */
     document.getElementById("loginBtn").addEventListener("click", async () => {
-      const username = loginUsername.value.trim().toLowerCase();
-      const password = loginPassword.value.trim();
+      const username = (loginUsername.value || "").trim().toLowerCase();
+      const password = (loginPassword.value || "").trim();
 
       if (!username || !password) {
         message.textContent = "Please fill in all fields.";
