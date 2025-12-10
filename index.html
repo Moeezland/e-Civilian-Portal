@@ -132,7 +132,7 @@
       <input type="text" id="civilId" placeholder="10-digit Civil ID" />
 
       <label>Phone Number</label>
-      <input type="tel" id="phoneInput" placeholder="Enter your number">
+      <input type="tel" id="phoneInput" placeholder="Enter your number" />
 
       <button id="registerBtn">Create Account</button>
 
@@ -146,12 +146,12 @@
 
   <!-- Firebase -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
     import {
       getAuth,
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
     import {
       getFirestore,
       doc,
@@ -160,7 +160,7 @@
       query,
       where,
       getDocs
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+    } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
@@ -175,15 +175,14 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Flag Phone Dropdown Init
-    const phoneInputField = document.querySelector("#phoneInput");
+    const phoneInputField = document.getElementById("phoneInput");
     const iti = window.intlTelInput(phoneInputField, {
       initialCountry: "auto",
       separateDialCode: true,
+      nationalMode: false,
       utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.1.1/js/utils.js"
     });
 
-    // Toggle Form
     const loginSection = document.getElementById("loginSection");
     const registerSection = document.getElementById("registerSection");
     const message = document.getElementById("message");
@@ -199,24 +198,73 @@
       message.textContent = "";
     };
 
-    /* REGISTER */
+    async function isFieldTaken(field, value) {
+      const q = query(collection(db, "users"), where(field, "==", value));
+      const snap = await getDocs(q);
+      return !snap.empty;
+    }
+
+    function sanitizeCivilId(input) {
+      return input.replace(/\D/g, "");
+    }
+
+    function sanitizePhone(number) {
+      number = number.trim();
+      if (!number.startsWith("+")) number = "+" + number;
+      return number.replace(/[^\+\d]/g, "");
+    }
+
     document.getElementById("registerBtn").addEventListener("click", async () => {
+      message.textContent = "";
+
       const username = regUsername.value.trim();
+      const username_lower = username.toLowerCase();
       const email = regEmail.value.trim().toLowerCase();
       const password = regPassword.value.trim();
-      const civilId = document.getElementById("civilId").value.trim();
-      const phone = iti.getNumber();
+
+      let civilId = sanitizeCivilId(document.getElementById("civilId").value.trim());
+      let phone = iti.getNumber();
+      phone = sanitizePhone(phone);
 
       if (!username || !email || !password || !civilId || !phone) {
         message.textContent = "Please fill in all fields.";
         return;
       }
 
+      if (civilId.length !== 10) {
+        message.textContent = "Civil ID must be exactly 10 digits.";
+        return;
+      }
+
+      const phoneDigits = phone.replace(/\D/g, "");
+      if (phoneDigits.length < 10 || phoneDigits.length > 16) {
+        message.textContent = "Phone number must be 10 to 16 digits long.";
+        return;
+      }
+
       try {
+        if (await isFieldTaken("username_lower", username_lower)) {
+          message.textContent = "Username already in use.";
+          return;
+        }
+        if (await isFieldTaken("civilId", civilId)) {
+          message.textContent = "Civil ID already registered.";
+          return;
+        }
+        if (await isFieldTaken("email_lower", email)) {
+          message.textContent = "Email already registered.";
+          return;
+        }
+        if (await isFieldTaken("phone", phone)) {
+          message.textContent = "Phone number already registered.";
+          return;
+        }
+
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
         await setDoc(doc(db, "users", userCredential.user.uid), {
           username,
-          username_lower: username.toLowerCase(),
+          username_lower,
           email,
           email_lower: email,
           civilId,
@@ -227,11 +275,10 @@
         alert("Account created successfully!");
         window.location.href = "dashboard.html";
       } catch (e) {
-        message.textContent = e.message;
+        message.textContent = e.message || "Registration failed.";
       }
     });
 
-    /* LOGIN */
     document.getElementById("loginBtn").addEventListener("click", async () => {
       const username = loginUsername.value.trim().toLowerCase();
       const password = loginPassword.value.trim();
