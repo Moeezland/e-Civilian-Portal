@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moeezland e-Civilian Portal</title>
+
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f8faff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .logo img {
+      width: 420px;
+      max-width: 90%;
+    }
+    .container {
+      background: white;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      padding: 30px 40px;
+      width: 360px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.3rem;
+      color: #0b56b3;
+      margin-bottom: 16px;
+    }
+    label {
+      font-weight: 500;
+      display: block;
+      margin: 8px 0 4px;
+      text-align: left;
+      color: #333;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    button {
+      background-color: #0b56b3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      width: 100%;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+    #message {
+      color: red;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="logo">
+    <img src="0d7cc0c7-b1b8-456a-bb2a-0b8bc59a06a4.png" alt="Moeezland Population Service Logo">
+  </div>
+
+  <div class="container">
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      background:#fff6cc;
+      color:#7a5a00;
+      font-weight:700;
+      letter-spacing:1px;
+      border-radius:10px;
+      font-size:14px;
+      border:1px solid #ffe08a;
+    ">
+      ⚠ LEGACY SYSTEM
+    </div>
+
+    <h1>Moeezland e-Civilian Portal</h1>
+
+    <label>Username</label>
+    <input type="text" id="loginUsername" placeholder="Enter your username" />
+
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="Enter your password" />
+
+    <button id="loginBtn">Login</button>
+
+    <div style="margin-top:12px; padding:10px; background:#ffe5e5; border:1px solid #ff9b9b; border-radius:8px; color:#9b0000; font-size:13px; line-height:1.4;">
+      <strong>Official Notice — M.I.P</strong><br><br>
+      This legacy version is deprecated due to critical security issues.
+      Updates end on <strong>1 January 2026</strong> and servers shut down by <strong>2030</strong>.
+      <br><br>
+      Continue on
+      <a href="https://portal.moeezland.com" target="_blank" style="color:#9b0000; font-weight:700; text-decoration:none;">
+        My Moeezland
+      </a>
+    </div>
+
+    <p id="message"></p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCs-pheSxe9bkAqnhG9qOjF7RvFfb9k00A",
+      authDomain: "e-civilian-portal2007.firebaseapp.com",
+      projectId: "e-civilian-portal2007",
+      storageBucket: "e-civilian-portal2007.firebasestorage.app",
+      messagingSenderId: "465001179759",
+      appId: "1:465001179759:web:60a45e286fbf1a39ac7b9a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const message = document.getElementById("message");
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const username = loginUsername.value.trim().toLowerCase();
+      const password = loginPassword.value.trim();
+
+      if (!username || !password) {
+        message.textContent = "Please fill in all fields.";
+        return;
+      }
+
+      try {
+        const q = query(collection(db, "users"), where("username_lower", "==", username));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          message.textContent = "User not found.";
+          return;
+        }
+
+        const email = snap.docs[0].data().email;
+        await signInWithEmailAndPassword(auth, email, password);
+
+        window.location.href = "dashboard.html";
+      } catch (e) {
+        message.textContent = "Invalid username or password.";
+      }
+    });
+  </script>
+</body>
+</html>
